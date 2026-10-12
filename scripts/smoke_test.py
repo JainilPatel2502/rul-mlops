@@ -1,10 +1,15 @@
-"""End-to-end smoke test of a running stack. Usage: python scripts/smoke_test.py [frontend_port] [prom_port] [grafana_port]"""
+"""End-to-end smoke test of a running stack.
+
+Usage: python scripts/smoke_test.py [frontend] [prometheus] [grafana]   (each as host:port)
+Defaults target the local compose stack; in Jenkins it runs in a container on the compose network
+with e.g. `frontend:80 prometheus:9090 grafana:3000`.
+"""
 import json
 import sys
 import time
 import urllib.request
 
-fe, prom, graf = (sys.argv[1:4] + ["8081", "9090", "3000"][len(sys.argv[1:4]):])
+fe, prom, graf = sys.argv[1:4] + ["localhost:8081", "localhost:9090", "localhost:3000"][len(sys.argv[1:4]):]
 SAMPLE = {"s_2": 642.5, "s_3": 1590, "s_4": 1410, "s_7": 553, "s_8": 2388, "s_11": 47.5,
           "s_12": 521.5, "s_13": 2388, "s_15": 8.42, "s_17": 392, "s_20": 38.9, "s_21": 23.3}
 
@@ -20,20 +25,20 @@ def post(url, body):
         return json.loads(r.read())
 
 
-health = json.loads(get(f"http://localhost:{fe}/api/health"))
+health = json.loads(get(f"http://{fe}/api/health"))
 assert health["model_loaded"] and health["db"], health
-pred = post(f"http://localhost:{fe}/api/predict", SAMPLE)
+pred = post(f"http://{fe}/api/predict", SAMPLE)
 assert 0 <= pred["rul"] <= 200 and pred["stored"], pred
-assert json.loads(get(f"http://localhost:{fe}/api/history")), "history empty"
+assert json.loads(get(f"http://{fe}/api/history")), "history empty"
 print("api OK:", pred)
 
+query = f"http://{prom}/api/v1/query?query=rul_predictions_total"
 for _ in range(12):  # wait for a Prometheus scrape
-    if "rul_predictions_total" in get(f"http://localhost:{prom}/api/v1/query?query=rul_predictions_total") and \
-            '"result":[]' not in get(f"http://localhost:{prom}/api/v1/query?query=rul_predictions_total"):
+    if '"result":[]' not in get(query):
         break
     time.sleep(5)
 else:
     sys.exit("prometheus has no rul_predictions_total")
 print("prometheus OK")
-assert json.loads(get(f"http://localhost:{graf}/api/health"))["database"] == "ok"
+assert json.loads(get(f"http://{graf}/api/health"))["database"] == "ok"
 print("grafana OK")

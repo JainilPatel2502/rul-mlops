@@ -1,0 +1,10 @@
+# CI toolbox image: every Jenkins step (lint, train, test, smoke test) runs inside this container,
+# so the build agent only needs Docker – no Python or pip on the host.
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY backend/requirements.txt backend/requirements-dev.txt backend/
+RUN pip install --no-cache-dir -r backend/requirements-dev.txt ruff
+COPY . .

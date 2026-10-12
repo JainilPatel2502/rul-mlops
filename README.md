@@ -48,9 +48,10 @@ Metrics exposed: `rul_predictions_total`, `rul_prediction_latency_seconds`, `rul
 
 ## CI/CD (Jenkins)
 
-The `Jenkinsfile` assumes a Windows agent with Python 3 and Docker Desktop. Stages: Install → Lint → Train model →
-Unit tests (JUnit report) → Build images → Integration test (`scripts/smoke_test.py` against a throw-away compose
-stack on ports 8181/8100/9190/3100) → Publish images.
+The pipeline is fully containerised: the Jenkins agent only needs **Docker Desktop** (no Python or pip on the host).
+`Dockerfile.ci` builds a toolbox image; lint, training, tests and the smoke test all run inside it, and the app
+is built/started with `docker compose`. Stages: Build CI image → Lint → Train model → Unit tests (JUnit report) →
+Build app images → Integration test (throw-away compose stack `rul-ci`, smoke test run on its Docker network) → Publish images.
 
 Setup: **New Item → Pipeline → Pipeline script from SCM** (or paste the Jenkinsfile) pointing at this repo.
 To enable publishing, set `DOCKERHUB_USER` in the Jenkinsfile and add a *Username with password* credential with id `dockerhub`.
