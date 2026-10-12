@@ -15,7 +15,7 @@ browser ──► nginx (frontend :8081) ──/api──► FastAPI (backend :8
 | Frontend | static HTML served by nginx, reverse-proxying `/api/` |
 | Database | `postgres:16-alpine` (stores every prediction) |
 | Monitoring | Prometheus scrapes `/metrics/`; Grafana dashboard auto-provisioned |
-| CI/CD | GitHub Actions: lint → train → tests → compose integration test → push images to GHCR |
+| CI/CD | Jenkins (`Jenkinsfile`): lint → train → tests → build → compose integration test → push images |
 
 ## Run
 
@@ -46,7 +46,11 @@ cd backend && pytest
 Metrics exposed: `rul_predictions_total`, `rul_prediction_latency_seconds`, `rul_prediction_errors_total`,
 `rul_last_prediction_cycles`, `rul_predicted_cycles` (histogram), `rul_db_up`.
 
-## CI/CD
+## CI/CD (Jenkins)
 
-`.github/workflows/ci-cd.yml` runs on every push/PR; on `main` it publishes
-`ghcr.io/<owner>/<repo>-backend` and `-frontend` images tagged `latest` and the commit SHA.
+The `Jenkinsfile` assumes a Windows agent with Python 3 and Docker Desktop. Stages: Install → Lint → Train model →
+Unit tests (JUnit report) → Build images → Integration test (`scripts/smoke_test.py` against a throw-away compose
+stack on ports 8181/8100/9190/3100) → Publish images.
+
+Setup: **New Item → Pipeline → Pipeline script from SCM** (or paste the Jenkinsfile) pointing at this repo.
+To enable publishing, set `DOCKERHUB_USER` in the Jenkinsfile and add a *Username with password* credential with id `dockerhub`.
