@@ -15,6 +15,8 @@ pipeline {
         BACKEND_PORT         = '8100'
         PROM_PORT            = '9190'
         GRAFANA_PORT         = '3100'
+        // Jenkins runs as LocalSystem, whose PATH lacks per-user installs: point at Python and Docker explicitly
+        PATH                 = "C:\Users\jaini\AppData\Local\Programs\Python\Python312;C:\Users\jaini\AppData\Local\Programs\Python\Python312\Scripts;C:\Program Files\Docker\Docker\resources\bin;${env.PATH}"
         // Optional: set to your Docker Hub user to enable the Publish stage
         DOCKERHUB_USER       = ''
     }
